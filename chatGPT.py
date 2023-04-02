@@ -1,51 +1,75 @@
 import os
 import discord
-from discord.ext import commands
+from discord import app_commands
 import openai
 
-# Load your Discord bot token and OpenAI API key from environment variables
+intents = discord.Intents.default()
+client = discord.Client(intents=intents)
+tree = app_commands.CommandTree(client)
+
 DISCORD_TOKEN = os.getenv("DISCORD_TOKEN")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
-# Set up the OpenAI API client
 openai.api_key = OPENAI_API_KEY
 
-# Set up the Discord bot client
-bot = commands.Bot(command_prefix="/")
+GUILD_ID = os.getenv("GUILD_ID")
 
-# Define the /gpt command
-@bot.command()
-async def gpt(ctx, *, prompt: str):
-    response = openai.Completion.create(
-        engine="davinci-codex",
-        prompt=prompt,
-        max_tokens=50,
+@client.event
+async def on_ready():
+    await tree.sync(guild=discord.Object(id=GUILD_ID))
+    print("Ready!")
+
+@tree.command(
+    name="gpt_ask",
+    description="Get a response from GPT",
+    guild=discord.Object(id=GUILD_ID),
+)
+async def gpt_ask(interaction, prompt: str):
+    response = openai.ChatCompletion.create(
+       model="gpt-3.5-turbo",
+       messages=[
+           {"role": "system", "content": "You are a helpful assistant."},
+           {"role": "user", "content": prompt},
+       ],
+       max_tokens=200,
+       n=1,
+       stop=None,
+       temperature=0.5,
+    )
+
+    answer = response['choices'][0]['message']['content'].strip()
+    await interaction.response.send_message(content=f"{prompt}")
+    await interaction.followup.send(content=answer)
+
+
+@tree.command(
+    name="gpt",
+    description="Get a response from GPT with context",
+    guild=discord.Object(id=GUILD_ID),
+)
+async def gpt(interaction, prompt: str, x: int=10):
+    messages = []
+    async for msg in interaction.channel.history(limit=x):
+        messages.append(msg)
+
+    conversation_messages = [{"role": "assistant" if msg.author.bot else "user", "content": f"{msg.author.name}: {str(msg.content)}"} for msg in messages if msg.content]
+
+    response = openai.ChatCompletion.create(
+        model="gpt-3.5-turbo",
+        messages=[
+            {"role": "system", "content": "You are part of a Discord conversation. Each message will be sent to you with the name of the person that typed the message. You should absolutely not write GPT: at the beggining of your response"},
+            *conversation_messages,
+            {"role": "user", "content": prompt},
+        ],
+        max_tokens=500,
         n=1,
         stop=None,
         temperature=0.5,
     )
 
-    answer = response.choices[0].text.strip()
-    await ctx.send(answer)
+    answer = response['choices'][0]['message']['content'].strip()
+    await interaction.response.send_message(content=f"{prompt}")
+    await interaction.followup.send(content=answer)
 
-# Define the /gpt_context command
-@bot.command()
-async def gpt_context(ctx, x: int, *, prompt: str):
-    messages = await ctx.channel.history(limit=x).flatten()
-    conversation = " ".join(msg.content for msg in messages[-x:])
-    prompt_with_context = f"{conversation}\n{prompt}"
+client.run(DISCORD_TOKEN)
 
-    response = openai.Completion.create(
-        engine="davinci-codex",
-        prompt=prompt_with_context,
-        max_tokens=50,
-        n=1,
-        stop=None,
-        temperature=0.5,
-    )
-
-    answer = response.choices[0].text.strip()
-    await ctx.send(answer)
-
-# Start the bot
-bot.run(DISCORD_TOKEN)
