@@ -25,6 +25,7 @@ async def on_ready():
     guild=discord.Object(id=GUILD_ID),
 )
 async def gpt_ask(interaction, prompt: str):
+    await interaction.response.defer()
     response = openai.ChatCompletion.create(
        model="gpt-3.5-turbo",
        messages=[
@@ -38,7 +39,7 @@ async def gpt_ask(interaction, prompt: str):
     )
 
     answer = response['choices'][0]['message']['content'].strip()
-    await interaction.response.send_message(content=f"{prompt}")
+    await interaction.followup.send(content=f"{prompt}")
     await interaction.followup.send(content=answer)
 
 
@@ -48,6 +49,7 @@ async def gpt_ask(interaction, prompt: str):
     guild=discord.Object(id=GUILD_ID),
 )
 async def gpt(interaction, prompt: str, x: int=10):
+    await interaction.response.defer()
     messages = []
     async for msg in interaction.channel.history(limit=x):
         messages.append(msg)
@@ -57,7 +59,7 @@ async def gpt(interaction, prompt: str, x: int=10):
     response = openai.ChatCompletion.create(
         model="gpt-3.5-turbo",
         messages=[
-            {"role": "system", "content": "You are part of a Discord conversation. Each message will be sent to you with the name of the person that typed the message. You should absolutely not write GPT: at the beggining of your response"},
+            {"role": "system", "content": "You are part of a Discord conversation. Each message will be sent to you with the name of the person that typed the message. You should absolutely not write GPT: at the beggining of your response. If your response starts by GPT:, you should remove it."},
             *conversation_messages,
             {"role": "user", "content": prompt},
         ],
@@ -68,8 +70,9 @@ async def gpt(interaction, prompt: str, x: int=10):
     )
 
     answer = response['choices'][0]['message']['content'].strip()
-    await interaction.response.send_message(content=f"{prompt}")
+    await interaction.followup.send(content=f"{prompt}")
     await interaction.followup.send(content=answer)
+
 
 client.run(DISCORD_TOKEN)
 
