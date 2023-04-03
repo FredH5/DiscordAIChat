@@ -9,6 +9,7 @@ tree = app_commands.CommandTree(client)
 
 DISCORD_TOKEN = os.getenv("DISCORD_TOKEN")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+OPENAI_MODEL = os.getenv("OPENAI_MODEL")
 
 openai.api_key = OPENAI_API_KEY
 
@@ -27,7 +28,7 @@ async def on_ready():
 async def gpt_ask(interaction, prompt: str):
     await interaction.response.defer()
     response = openai.ChatCompletion.create(
-       model="gpt-3.5-turbo",
+       model=OPENAI_MODEL,
        messages=[
            {"role": "system", "content": "You are a helpful assistant."},
            {"role": "user", "content": prompt},
@@ -54,12 +55,15 @@ async def gpt(interaction, prompt: str, x: int=10):
     async for msg in interaction.channel.history(limit=x):
         messages.append(msg)
 
-    conversation_messages = [{"role": "assistant" if msg.author.bot else "user", "content": f"{msg.author.name}: {str(msg.content)}"} for msg in messages if msg.content]
+    conversation_messages = [{"role": "assistant" if (msg.author.bot and msg.type == discord.MessageType.reply) else "user", "content": msg.content} for msg in reversed(messages) if msg.content]
+
+    for msg in conversation_messages:
+        print(msg)
 
     response = openai.ChatCompletion.create(
-        model="gpt-3.5-turbo",
+        model=OPENAI_MODEL,
         messages=[
-            {"role": "system", "content": "You are part of a Discord conversation. Each message will be sent to you with the name of the person that typed the message. You should absolutely not write GPT: at the beggining of your response. If your response starts by GPT:, you should remove it."},
+            {"role": "system", "content": "You are part of a Discord conversation. Answer what's being asked in the context of the conversation history."},
             *conversation_messages,
             {"role": "user", "content": prompt},
         ],
