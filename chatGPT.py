@@ -2,6 +2,7 @@ import os
 import discord
 from discord import app_commands
 import openai
+import requests
 
 intents = discord.Intents.default()
 client = discord.Client(intents=intents)
@@ -27,8 +28,11 @@ async def on_ready():
 )
 async def gpt_ask(interaction):
     await interaction.response.defer()
-    response = openai.Usage.retrieve()
-    answer = response
+    headers = {
+        "Authorization": f"Bearer {OPENAI_API_KEY}",
+    }
+    response = requests.get("https://api.openai.com/v1/usage", headers=headers)
+    answer = response.json()
     await interaction.followup.send(content="What is my current API usage?")
     await interaction.followup.send(content=answer)
 
