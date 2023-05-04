@@ -3,6 +3,7 @@ import discord
 from discord import app_commands
 import openai
 import requests
+from datetime import datetime
 
 intents = discord.Intents.default()
 client = discord.Client(intents=intents)
