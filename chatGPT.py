@@ -21,6 +21,19 @@ async def on_ready():
     print("Ready!")
 
 @tree.command(
+    name="gpt_usage",
+    description="Get current usage",
+    guild=discord.Object(id=GUILD_ID),
+)
+async def gpt_ask(interaction):
+    await interaction.response.defer()
+    response = openai.Usage.retrieve()
+    answer = response
+    await interaction.followup.send(content="What is my current API usage?")
+    await interaction.followup.send(content=answer)
+
+
+@tree.command(
     name="gpt_ask",
     description="Get a response from GPT",
     guild=discord.Object(id=GUILD_ID),
