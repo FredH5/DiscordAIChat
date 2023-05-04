@@ -31,7 +31,10 @@ async def gpt_ask(interaction):
     headers = {
         "Authorization": f"Bearer {OPENAI_API_KEY}",
     }
-    response = requests.get("https://api.openai.com/v1/usage", headers=headers)
+    params = {
+        "date": datetime.today().strftime('%Y-%m-%d')
+    }
+    response = requests.get("https://api.openai.com/v1/usage", headers=headers, params=params)
     answer = response.json()
     await interaction.followup.send(content="What is my current API usage?")
     await interaction.followup.send(content=answer)
