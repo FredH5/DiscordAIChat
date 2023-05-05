@@ -57,7 +57,7 @@ async def gpt_ask(interaction, prompt: str):
        max_tokens=500,
        n=1,
        stop=None,
-       temperature=0.5,
+       temperature=0.4,
     )
 
     answer = response['choices'][0]['message']['content'].strip()
